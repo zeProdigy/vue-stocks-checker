@@ -1,0 +1,9 @@
+body {
+    padding: 20px;
+    font-family: Helvetica;
+}
+
+#site-content {
+    margin: 0 auto;
+    width: 600px;
+}
