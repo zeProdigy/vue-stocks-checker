@@ -199,14 +199,14 @@ function makeQuery(params) {
 async function request(url, query) {
     query = query || makeQuery();
 
-    console.log(url + query.toString());
+    // console.log(url + query.toString());
 
     let res = await axios.get(url + query.toString());
-    if (!res.ok) {
+    if (res.status != 200) {
         throw new Error(`${url} axios error, status: ${res.statusText}`);
     }
 
-    return await res.json();
+    return await res.data;
 }
 
 export { MoexISS };

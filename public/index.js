@@ -23,11 +23,17 @@ const stocksCheckerInput = {
 
     methods: {
         async onInputAccept(event) {
-            const ticker = this.ticker;
-            const spec = await MoexISS.spec(ticker);
-            const info = await MoexISS.info(spec.mainboard);
-            console.log(info);
-            // this.$root.$refs.dataTable.addItem('33', '33', '33');
+            const tickers = this.ticker.split(';');
+
+            tickers.forEach(async (ticker) => {
+                const spec = await MoexISS.spec(ticker);
+                const info = await MoexISS.info(spec.mainboard);
+
+                this.$root.$refs.dataTable.addItem(
+                    info.marketdata['SECID'],
+                    info.marketdata['LAST'],
+                    info.marketdata['LASTTOPREVPRICE']);
+            });
         }
     }
 };
@@ -48,21 +54,32 @@ const stocksCheckerTable = {
             <td>{{ row.ticker }}</td>
             <td>{{ row.price }}</td>
             <td>{{ row.dayChange }} %</td>
-            <td><button type="button" class="btn btn-danger">Delete</button></td>
+            <td><button @click="removeItem" v-bind:id="row.ticker" type="button" class="btn btn-danger">Delete</button></td>
         </tr>
         </tbody>
     </table>`,
 
     data() {
         return {
-            tableRows: []
+            tableRows: [{ticker: 'GAZP', price: '3333', dayChange: '0'}]
         };
     },
 
     methods: {
         addItem(ticker, price, dayChange) {
-            //this.tableRows.push({ticker: ticker, price: price, dayChange: dayChange});
-            console.log('add item');
+            const item = {ticker: ticker, price: price, dayChange: dayChange};
+            console.log(`add item: ${item.ticker}`);
+            this.tableRows.push(item);
+        },
+
+        removeItem(event) {
+            const id = event.currentTarget.id;
+            for (let i = 0; i < this.tableRows.length; i++) {
+                if (id === this.tableRows[i].ticker) {
+                    console.log(`remove item: ${this.tableRows[i].ticker}`);
+                    this.tableRows.splice(i, 1);
+                }
+            }
         }
     }
 };
