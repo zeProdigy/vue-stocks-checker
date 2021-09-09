@@ -12,12 +12,12 @@ const stocksCheckerHeader = {
 
 const stocksCheckerInput = {
     template: `
-        <input v-model="ticker" type="text" class="mx-2 px-3" placeholder="Ticker here">
+        <input v-model="ticker" type="text" class="mx-2 px-3" placeholder="GAZP;SBER;ROSN">
         <button @click="onInputAccept" class="btn btn-primary px-5" type="button">Add</button>`,
 
     data() {
         return {
-            ticker: ''
+            ticker: 'GAZP;SBER;ROSN;POLY;PIKK;PLZL;ALRS;AFLT;LKOH;NLMK'
         }
     },
 
@@ -25,15 +25,11 @@ const stocksCheckerInput = {
         async onInputAccept(event) {
             const tickers = this.ticker.split(';');
 
-            tickers.forEach(async (ticker) => {
-                const spec = await MoexISS.spec(ticker);
-                const info = await MoexISS.info(spec.mainboard);
-
-                this.$root.$refs.dataTable.addItem(
-                    info.marketdata['SECID'],
-                    info.marketdata['LAST'],
-                    info.marketdata['LASTTOPREVPRICE']);
+            tickers.forEach(ticker => {
+                this.$root.$refs.dataTable.addTicker(ticker);
             });
+
+            this.ticker = '';
         }
     }
 };
@@ -50,36 +46,96 @@ const stocksCheckerTable = {
         </tr>
         </thead>
         <tbody>
-        <tr v-for="row in tableRows">
-            <td>{{ row.ticker }}</td>
-            <td>{{ row.price }}</td>
-            <td>{{ row.dayChange }} %</td>
-            <td><button @click="removeItem" v-bind:id="row.ticker" type="button" class="btn btn-danger">Delete</button></td>
+        <tr v-for="(data, ticker) in tableRows" v-bind:class="data.animation" v-on:animationend="removeAnimation(ticker)">
+            <td>{{ ticker }}</td>
+            <td>{{ data.price }}</td>
+            <td>{{ data.dayChange }} %</td>
+            <td><button @click="removeItem" v-bind:id="ticker" type="button" class="btn btn-danger">Delete</button></td>
         </tr>
         </tbody>
     </table>`,
 
+    created() {
+        this.makeRefreshable(3000);
+    },
+
     data() {
         return {
-            tableRows: [{ticker: 'GAZP', price: '3333', dayChange: '0'}]
+            tableRows: {}
         };
     },
 
     methods: {
-        addItem(ticker, price, dayChange) {
-            const item = {ticker: ticker, price: price, dayChange: dayChange};
-            console.log(`add item: ${item.ticker}`);
-            this.tableRows.push(item);
+        async addTicker(ticker) {
+            if (this.tableRows[ticker]) {
+                console.log('already in table');
+                return;
+            }
+
+            try {
+                await this.addItem(ticker);
+            } catch(err) {
+                console.log(err);
+            }
+        },
+
+        async updateAll() {
+            for (let id in this.tableRows) {
+                await this.updateItem(id);
+            }
+        },
+
+        makeRefreshable(period) {
+            setInterval(() => {
+                console.log('update table');
+                this.updateAll();
+            }, period);
+        },
+
+        async addItem(ticker) {
+            let spec, info;
+
+            try {
+                spec = await MoexISS.spec(ticker);
+                info = await MoexISS.info(spec.mainboard);
+            } catch(err) {
+                throw new Error(`Moex ISS query err: ${err}`);
+            }
+
+            this.tableRows[ticker] = {
+                price: info.marketdata['LAST'],
+                dayChange: info.marketdata['LASTTOPREVPRICE'],
+                animation: '',
+            };
+        },
+
+        async updateItem(ticker, price, dayChange) {
+            const spec = await MoexISS.spec(ticker);
+            const info = await MoexISS.info(spec.mainboard);
+
+            const prevPrice = this.tableRows[ticker].price;
+
+            this.tableRows[ticker].price = info.marketdata['LAST'];
+            this.tableRows[ticker].dayChange = info.marketdata['LASTTOPREVPRICE'];
+
+            if (this.tableRows[ticker].price > prevPrice) {
+                this.tableRows[ticker].animation = 'fadeGreen';
+            } else if (this.tableRows[ticker].price < prevPrice) {
+                this.tableRows[ticker].animation = 'fadeRed';
+            } else {
+                this.tableRows[ticker].animation = '';
+            }
         },
 
         removeItem(event) {
             const id = event.currentTarget.id;
-            for (let i = 0; i < this.tableRows.length; i++) {
-                if (id === this.tableRows[i].ticker) {
-                    console.log(`remove item: ${this.tableRows[i].ticker}`);
-                    this.tableRows.splice(i, 1);
-                }
+            if (id in this.tableRows) {
+                delete this.tableRows[id];
             }
+        },
+
+        removeAnimation(ticker) {
+            this.tableRows[ticker].animation = '';
         }
     }
 };

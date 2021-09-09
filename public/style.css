@@ -7,3 +7,24 @@ body {
     margin: 0 auto;
     width: 600px;
 }
+
+@keyframes fadeRedAnimation {
+    0%   { background-color: #FFFFFF; }
+    50%  { background-color: #FF0000; }
+    100% { background-color: #FFFFFF; }
+}
+
+@keyframes fadeGreenAnimation {
+    0%   { background-color: #FFFFFF; }
+    50%  { background-color: #00FF00; }
+    100% { background-color: #FFFFFF; }
+}
+
+.fadeRed {
+    animation: fadeRedAnimation 1.2s ease-in-out;
+}
+
+.fadeGreen {
+    animation: fadeGreenAnimation 1.2s ease-in-out;
+}
+
